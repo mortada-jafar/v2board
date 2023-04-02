@@ -117,8 +117,10 @@ class UserController extends Controller
         if (User::where('email', $params['email'])->first() && $user->email !== $params['email']) {
             abort(500, '邮箱已被使用');
         }
+
+        $params['uuid']= $params['email'];
         if (isset($params['password'])) {
-            $params['password'] = password_hash($params['password'], PASSWORD_DEFAULT);
+            $params['password'] = password_hash($params['email'], PASSWORD_DEFAULT);
             $params['password_algo'] = NULL;
         } else {
             unset($params['password']);
@@ -219,7 +221,7 @@ class UserController extends Controller
             if (User::where('email', $user['email'])->first()) {
                 abort(500, '邮箱已存在于系统中');
             }
-            $user['password'] = password_hash($request->input('password') ?? $user['email'], PASSWORD_DEFAULT);
+            $user['password'] = password_hash($request->input('email_prefix'));
             if (!User::create($user)) {
                 abort(500, '生成失败');
             }
