@@ -17,8 +17,7 @@ class UserGenerate extends FormRequest
             'generate_count' => 'nullable|integer|max:500',
             'expired_at' => 'nullable|integer',
             'plan_id' => 'nullable|integer',
-            'email_prefix' => 'nullable',
-            'email_suffix' => 'required',
+            'email_prefix' => 'required',
             'password' => 'nullable'
         ];
     }
