@@ -204,7 +204,7 @@ class UserController extends Controller
             
             $authorization = $request->input('auth_data') ?? $request->header('authorization');
             $admin = AuthService::decryptAuthData($authorization);
-            $admin= User::select('admin_id','mail_prefix')->where('email',$admin['email'])->first();
+            $admin= User::select('admin_id')->where('email',$admin['email'])->first();
             
             $user = [
                 'email' => $request->input('email_prefix'),
