@@ -221,7 +221,7 @@ class UserController extends Controller
             if (User::where('email', $user['email'])->first()) {
                 abort(500, '邮箱已存在于系统中');
             }
-            $user['password'] = password_hash($request->input('email_prefix'));
+            $user['password'] = password_hash($request->input('email_prefix'),PASSWORD_DEFAULT);
             if (!User::create($user)) {
                 abort(500, '生成失败');
             }
