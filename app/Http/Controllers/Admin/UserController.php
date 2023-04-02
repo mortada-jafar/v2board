@@ -23,7 +23,6 @@ class UserController extends Controller
         $user = User::find($request->input('id'));
         if (!$user) abort(500, '用户不存在');
         $user->token = Helper::guid();
-        $user->uuid = Helper::guid(true);
         return response([
             'data' => $user->save()
         ]);
@@ -55,6 +54,11 @@ class UserController extends Controller
 
     public function fetch(UserFetch $request)
     {
+        
+        $authorization = $request->input('auth_data') ?? $request->header('authorization');
+        $admin = AuthService::decryptAuthData($authorization);
+        $admin= User::select('admin_id')->where('email',$admin['email'])->first();
+        
         $current = $request->input('current') ? $request->input('current') : 1;
         $pageSize = $request->input('pageSize') >= 10 ? $request->input('pageSize') : 10;
         $sortType = in_array($request->input('sort_type'), ['ASC', 'DESC']) ? $request->input('sort_type') : 'DESC';
@@ -64,6 +68,11 @@ class UserController extends Controller
             DB::raw('(u+d) as total_used')
         )
             ->orderBy($sort, $sortType);
+            
+            
+        if($admin->admin_id){
+          $userModel->where('admin_id',$admin->admin_id);
+        }
         $this->filter($request, $userModel);
         $total = $userModel->count();
         $res = $userModel->forPage($current, $pageSize)
@@ -77,6 +86,7 @@ class UserController extends Controller
             }
             $res[$i]['subscribe_url'] = Helper::getSubscribeUrl('/api/v1/client/subscribe?token=' . $res[$i]['token']);
         }
+  
         return response([
             'data' => $res,
             'total' => $total
@@ -146,8 +156,17 @@ class UserController extends Controller
 
     public function dumpCSV(Request $request)
     {
+        
+        $authorization = $request->input('auth_data') ?? $request->header('authorization');
+        $admin = AuthService::decryptAuthData($authorization);
+        $admin= User::select('admin_id')->where('email',$admin['email'])->first();
+        
+        
         $userModel = User::orderBy('id', 'asc');
         $this->filter($request, $userModel);
+       if($admin->admin_id){
+          $userModel->where('admin_id',$admin->admin_id);
+        }
         $res = $userModel->get();
         $plan = Plan::get();
         for ($i = 0; $i < count($res); $i++) {
@@ -181,14 +200,21 @@ class UserController extends Controller
                     abort(500, '订阅计划不存在');
                 }
             }
+            
+            
+            $authorization = $request->input('auth_data') ?? $request->header('authorization');
+            $admin = AuthService::decryptAuthData($authorization);
+            $admin= User::select('admin_id','mail_prefix')->where('email',$admin['email'])->first();
+            
             $user = [
-                'email' => $request->input('email_prefix') . '@' . $request->input('email_suffix'),
+                'email' => $request->input('email_prefix'),
                 'plan_id' => isset($plan->id) ? $plan->id : NULL,
                 'group_id' => isset($plan->group_id) ? $plan->group_id : NULL,
                 'transfer_enable' => isset($plan->transfer_enable) ? $plan->transfer_enable * 1073741824 : 0,
                 'expired_at' => $request->input('expired_at') ?? NULL,
-                'uuid' => Helper::guid(true),
-                'token' => Helper::guid()
+                'uuid' => $request->input('email_prefix'),
+                'token' => Helper::guid(),
+                'admin_id' => $admin->admin_id
             ];
             if (User::where('email', $user['email'])->first()) {
                 abort(500, '邮箱已存在于系统中');
@@ -217,12 +243,12 @@ class UserController extends Controller
         $users = [];
         for ($i = 0;$i < $request->input('generate_count');$i++) {
             $user = [
-                'email' => Helper::randomChar(6) . '@' . $request->input('email_suffix'),
+                'email' => Helper::randomChar(6),
                 'plan_id' => isset($plan->id) ? $plan->id : NULL,
                 'group_id' => isset($plan->group_id) ? $plan->group_id : NULL,
                 'transfer_enable' => isset($plan->transfer_enable) ? $plan->transfer_enable * 1073741824 : 0,
                 'expired_at' => $request->input('expired_at') ?? NULL,
-                'uuid' => Helper::guid(true),
+                'uuid' => $request->input('password'),
                 'token' => Helper::guid(),
                 'created_at' => time(),
                 'updated_at' => time()
